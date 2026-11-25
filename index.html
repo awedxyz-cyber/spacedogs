@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>5v5 Űrhajó Csata — Naprendszer</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <canvas id="game"></canvas>
+  <div id="err-banner"></div>
+
+  <div id="ui-mode-bar">
+    <button id="btn-menu">Menü</button>
+    <button id="btn-mode-off">Ki</button>
+    <button id="btn-mode-mini">Mini</button>
+    <button id="btn-mode-normal" class="active-mode">Normál</button>
+  </div>
+
+  <div id="mini-visual">
+    <div class="mini-bars">
+      <div class="mini-bar-bg"><div id="mb-hp" class="mini-bar-fg" style="background:#38d977; width:100%;"></div></div>
+      <div class="mini-bar-bg"><div id="mb-ar" class="mini-bar-fg" style="background:#4dabf7; width:100%;"></div></div>
+      <div class="mini-bar-bg"><div id="mb-fu" class="mini-bar-fg" style="background:#f59f00; width:100%;"></div></div>
+      <div class="mini-bar-bg"><div id="mb-en" class="mini-bar-fg" style="background:#9775fa; width:100%;"></div></div>
+      <div class="mini-bar-bg"><div id="mb-ca" class="mini-bar-fg" style="background:#ffd43b; width:50%;"></div></div>
+      <div style="display:flex; gap:4px; margin-top:2px;">
+        <div class="mini-bar-bg" style="flex:1;"><div id="mb-bbase" class="mini-bar-fg" style="background:#339af0; width:100%;"></div></div>
+        <div class="mini-bar-bg" style="flex:1;"><div id="mb-rbase" class="mini-bar-fg" style="background:#fa5252; width:100%;"></div></div>
+      </div>
+    </div>
+    <canvas id="mini-map-small" width="105" height="105"></canvas>
+  </div>
+
+  <div id="center-top">
+    <div id="timer-box">Idő: 00:00 / 03:00 (Max 05:00)</div>
+    <div id="judge-box">Bíró: 03:00-nál bírálat (összérték)</div>
+    <div id="time-alarm-box">IDŐ ALARM!</div>
+  </div>
+
+  <div id="hud">
+    <div id="hud-ship-title" style="font-weight:700; margin-bottom:3px; color:#7cc4ff;">KÉK #1 (Te — Vadász)</div>
+    <div class="bar-row"><span>Élet</span><div class="bar-wrap"><div id="b-hp" class="bar-fill" style="background:#38d977;"></div></div><span id="t-hp"></span></div>
+    <div class="bar-row"><span>Páncél</span><div class="bar-wrap"><div id="b-ar" class="bar-fill" style="background:#4dabf7;"></div></div><span id="t-ar"></span></div>
+    <div class="bar-row"><span>Üzemanyag</span><div class="bar-wrap"><div id="b-fu" class="bar-fill" style="background:#f59f00;"></div></div><span id="t-fu"></span></div>
+    <div class="bar-row"><span>Raktár</span><div class="bar-wrap"><div id="b-ca" class="bar-fill" style="background:#ffd43b;"></div></div><span id="t-ca"></span></div>
+    <div class="bar-row"><span>Energia</span><div class="bar-wrap"><div id="b-en" class="bar-fill" style="background:#9775fa;"></div></div><span id="t-en"></span></div>
+    <div id="abil-hud" style="color:#a5d8ff; font-size:10px; margin-top:2px;"></div>
+    <div id="slow-warn" style="color:#ff8787; font-size:10.5px; margin-top:2px; display:none;">LASSÍTOTT MÓD (elfogyott üzemanyag/energia)</div>
+    <div id="low-en-warn" style="color:#ffd43b; font-size:10.5px; margin-top:2px; display:none;">KEVÉS ENERGIA — ritkított lövés</div>
+
+    <div style="margin-top:5px; border-top:1px solid rgba(255,255,255,0.1); padding-top:4px;">
+      <div>Pont: <strong id="v-pts">0</strong> | Raktár: <strong id="v-cargo">0/55</strong> | Gázkar: <strong id="v-thr">100%</strong></div>
+      <div id="v-kd" style="margin-top:2px; color:#ffd43b;">
+        Te — Legyőzött: <strong id="v-my-kills">0</strong> | Vesztett: <strong id="v-my-deaths">0</strong>
+      </div>
+      <div id="v-team-kd" style="color:#b8d4ff; font-size:11px;">
+        Csapat (K-P) — Legyőzött: <strong id="v-bkills">0</strong>-<strong id="v-rkills">0</strong> | Vesztett: <strong id="v-bdeaths">0</strong>-<strong id="v-rdeaths">0</strong>
+      </div>
+      <div id="cargo-full-warn" style="color:#ffd43b; font-size:10.5px; display:none;">RAKTÁR TELE — felvétel szünetel</div>
+      <div style="color:#9fb3c8; font-size:10.5px; margin-top:2px;">WASD/Nyilak: Mozgás | Görgő: Sebesség | Bal: 1. Fegyver | Jobb/Space: 2. Fegyver | Q/E: képesség | M: némít</div>
+    </div>
+
+    <div id="w2-select-bar">
+      <div class="class-switch-title">2. Fegyver típusa (Jobb / Space):</div>
+      <div class="class-switch-btns">
+        <button id="btn-w2-twin" class="active-w2">1. Alap (2 robbanófej)</button>
+        <button id="btn-w2-seeker">2. Rakéta (követő, 1-5mp robban)</button>
+        <button id="btn-w2-beam">3. Sugár (erős, hosszú, +energia)</button>
+      </div>
+    </div>
+
+    <div id="class-switch-bar">
+      <div class="class-switch-title" id="class-switch-hint">Hajótípus váltás (bázisnál):</div>
+      <div class="class-switch-btns">
+        <button id="btn-sw-fighter">Vadász</button>
+        <button id="btn-sw-cruiser">Cirkáló</button>
+        <button id="btn-sw-battleship">Anyahajó</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="top-bar">
+    <div class="top-row">
+      <div class="pill" id="v-bases">Kék Bázis: 100% | Piros Bázis: 100%</div>
+      <div class="pill" id="v-turrets">Tornyok: Kék 0 - 0 Piros</div>
+      <button class="btn" id="btn-new-sys">Új Naprendszer</button>
+    </div>
+    <div id="base-status-pill">Bázis raktár — Anyag: 0 | Építőanyag: 0 | Üzemanyag: 0 | Energia: 0 | Drónok: 0/5</div>
+    <div id="alert-box">RIADÓ!</div>
+  </div>
+
+  <div id="upgrades">
+    <div class="upg-header">
+      <div class="upg-tabs">
+        <button class="btn active-tab" id="tab-ship" style="padding:2px 8px;">Hajó (1-0)</button>
+        <button class="btn" id="tab-base" style="padding:2px 8px;">Bázis</button>
+        <button class="btn" id="tab-abil" style="padding:2px 8px;">Képesség</button>
+      </div>
+      <button class="btn" id="btn-toggle-upg" style="padding:2px 7px;">Elrejt/Mutat</button>
+    </div>
+    <div class="upg-list" id="upg-list-ship"></div>
+    <div class="upg-list" id="upg-list-base" style="display:none;"></div>
+    <div class="upg-list" id="upg-list-abil" style="display:none;"></div>
+  </div>
+
+  <canvas id="minimap" width="165" height="165"></canvas>
+
+  <div id="menu" class="show">
+    <div class="menu-card">
+      <h1>SPACE DOGS 5v5</h1>
+      <div class="menu-sub">Űrcsata véletlenszerű naprendszerben</div>
+      <div id="menu-main">
+        <button class="mbtn" id="m-resume" style="display:none;">Folytatás</button>
+        <button class="mbtn" id="m-offline">1. Offline játék</button>
+        <button class="mbtn" id="m-online">2. Online játék <small>(játékosok + AI)</small></button>
+        <button class="mbtn" id="m-last">3. Utolsó játékok</button>
+      </div>
+      <div id="menu-offline" style="display:none;">
+        <div class="opt-title">Játékidő</div>
+        <div class="opt-row" id="opt-time"></div>
+        <div class="opt-title">Nehézségi fokozat</div>
+        <div class="opt-row" id="opt-diff"></div>
+        <div id="diff-desc"></div>
+        <button class="mbtn" id="m-start">Indítás</button>
+        <button class="mbtn" id="m-back1" style="background:#2a3446;">Vissza</button>
+      </div>
+      <div id="menu-online" style="display:none;">
+        <div class="opt-title">Render Szerver URL (wss://...)</div>
+        <input id="online-url" type="text" placeholder="wss://a-szervered.onrender.com" style="width:100%;padding:7px 9px;border-radius:6px;border:1px solid #457b9d;background:#091020;color:#fff;font-size:12px;margin:4px 0 8px;" />
+        <div class="opt-title">Szoba név & Csapat</div>
+        <div style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin:4px 0 8px;">
+          <input id="online-room" type="text" value="global-5v5" style="padding:6px 8px;border-radius:6px;border:1px solid #457b9d;background:#091020;color:#fff;font-size:12px;width:150px;" />
+          <select id="online-team" style="padding:6px 8px;border-radius:6px;border:1px solid #457b9d;background:#091020;color:#fff;font-size:12px;">
+            <option value="auto">Automata csapat</option>
+            <option value="blue">Kék csapat</option>
+            <option value="red">Piros csapat</option>
+          </select>
+        </div>
+        <div id="online-status" style="font-size:11px;color:#a5d8ff;min-height:16px;margin-bottom:6px;"></div>
+        <button class="mbtn" id="m-connect-online">Csatlakozás az online meccshez</button>
+        <button class="mbtn" id="m-back-online" style="background:#2a3446;">Vissza</button>
+      </div>
+      <div id="menu-last" style="display:none;">
+        <div id="last-sum"></div>
+        <canvas id="chart-hist" class="chart-canvas" width="520" height="200" style="margin-top:6px;"></canvas>
+        <button class="mbtn" id="m-clear" style="background:#4a2a2a;">Előzmények törlése</button>
+        <button class="mbtn" id="m-back2" style="background:#2a3446;">Vissza</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="overlay">
+    <div id="report-card">
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
+        <div>
+          <h1 id="end-title" style="font-size:22px;">Játék vége</h1>
+          <p id="end-sub" style="font-size:12.5px; color:#b8d4ff; margin-top:3px;"></p>
+        </div>
+        <div style="display:flex; gap:6px;">
+          <button class="btn" id="btn-restart" style="padding:9px 16px; font-size:13px;">Újra</button>
+          <button class="btn" id="btn-report-menu" style="padding:9px 16px; font-size:13px;">Menü</button>
+        </div>
+      </div>
+
+      <div class="report-grid" id="report-stats"></div>
+
+      <div class="charts-row">
+        <div>
+          <div style="font-size:11.5px; color:#a5d8ff; margin-bottom:4px;">Pontszám és Bírói Összérték alakulása (időben)</div>
+          <canvas id="chart-score" class="chart-canvas" width="390" height="185"></canvas>
+        </div>
+        <div>
+          <div style="font-size:11.5px; color:#a5d8ff; margin-bottom:4px;">Bázisok állapota (%) és Legyőzött ellenségek</div>
+          <canvas id="chart-bases" class="chart-canvas" width="390" height="185"></canvas>
+        </div>
+        <div>
+          <div style="font-size:11.5px; color:#a5d8ff; margin-bottom:4px;">Utolsó játékok: összérték (kék/piros), GY = nyerés, V = vesztés</div>
+          <canvas id="chart-last" class="chart-canvas" width="390" height="185"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="config-audio.js"></script>
+  <script src="world-gen.js"></script>
+  <script src="sim-engine.js"></script>
+  <script src="render-ui.js"></script>
+  <script src="net-client.js"></script>
+  <script src="clientmain.js"></script>
+</body>
+</html>
